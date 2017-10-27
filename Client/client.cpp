@@ -83,7 +83,9 @@ int __cdecl main(int argc, char **argv)
         WSACleanup();
         return 1;
     }
-
+	while(1)
+	{
+		Sleep(1000);
     // Send an initial buffer
     iResult = send( ConnectSocket, sendbuf, (int)strlen(sendbuf), 0 );
     if (iResult == SOCKET_ERROR) {
@@ -95,17 +97,17 @@ int __cdecl main(int argc, char **argv)
 
     printf("Bytes Sent: %ld\n", iResult);
 
-    // shutdown the connection since no more data will be sent
-    iResult = shutdown(ConnectSocket, SD_SEND);
-    if (iResult == SOCKET_ERROR) {
-        printf("shutdown failed with error: %d\n", WSAGetLastError());
-        closesocket(ConnectSocket);
-        WSACleanup();
-        return 1;
-    }
+    //// shutdown the connection since no more data will be sent
+    //iResult = shutdown(ConnectSocket, SD_SEND);
+    //if (iResult == SOCKET_ERROR) {
+    //    printf("shutdown failed with error: %d\n", WSAGetLastError());
+    //    closesocket(ConnectSocket);
+    //    WSACleanup();
+    //    return 1;
+    //}
 
     // Receive until the peer closes the connection
-    do {
+    //do {
 
         iResult = recv(ConnectSocket, recvbuf, recvbuflen, 0);
         if ( iResult > 0 )
@@ -115,7 +117,8 @@ int __cdecl main(int argc, char **argv)
         else
             printf("recv failed with error: %d\n", WSAGetLastError());
 
-    } while( iResult > 0 );
+    //} while( iResult > 0 );
+	}
 
     // cleanup
     closesocket(ConnectSocket);

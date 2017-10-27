@@ -1,3 +1,4 @@
+
 #undef UNICODE
 
 #define WIN32_LEAN_AND_MEAN
@@ -14,6 +15,8 @@
 
 #define DEFAULT_BUFLEN 512
 #define DEFAULT_PORT "27015"
+
+DWORD WINAPI CommWithClient( LPVOID lpParam ) ;
 
 int __cdecl main(void) 
 {
@@ -80,28 +83,73 @@ int __cdecl main(void)
         return 1;
     }
 
-    // Accept a client socket
-    ClientSocket = accept(ListenSocket, NULL, NULL);
-    if (ClientSocket == INVALID_SOCKET) {
-        printf("accept failed with error: %d\n", WSAGetLastError());
-        closesocket(ListenSocket);
+	while(1)
+	{
+		DWORD dwThreadId;
+		HANDLE hThread;
+		// Accept a client socket
+		ClientSocket = accept(ListenSocket, NULL, NULL);
+		if (ClientSocket == INVALID_SOCKET) {
+			printf("accept failed with error: %d\n", WSAGetLastError());
+			closesocket(ListenSocket);
+			WSACleanup();
+			return 1;
+		}
+		hThread = CreateThread( 
+            NULL,                   // default security attributes
+            0,                      // use default stack size  
+			CommWithClient,       // thread function name
+			(LPVOID)ClientSocket,          // argument to thread function 
+            0,                      // use default creation flags 
+            &dwThreadId);   // returns the thread identifier 
+	}
+
+    // shutdown the connection since we're done
+    iResult = shutdown(ClientSocket, SD_SEND);
+    if (iResult == SOCKET_ERROR) {
+        printf("shutdown failed with error: %d\n", WSAGetLastError());
+        closesocket(ClientSocket);
         WSACleanup();
         return 1;
     }
 
-    // No longer need server socket
-    closesocket(ListenSocket);
+    // cleanup
+    closesocket(ClientSocket);
+    WSACleanup();
+
+    return 0;
+}
+
+
+
+DWORD WINAPI CommWithClient( LPVOID lpParam ) 
+{ 
+	int iResult;
+
+    SOCKET ClientSocket =(SOCKET)lpParam;
+	int iSendResult;
+    char recvbuf[DEFAULT_BUFLEN];
+    int recvbuflen = DEFAULT_BUFLEN;
 
     // Receive until the peer shuts down the connection
     do {
 
         iResult = recv(ClientSocket, recvbuf, recvbuflen, 0);
-        if (iResult > 0) {
+        if (iResult > 0)
+		{
+
+			int i;
             printf("Bytes received: %d\n", iResult);
+
+			for(i=0;i<iResult;i++)
+			{
+				recvbuf[i] ^= 'x';
+			}
 
         // Echo the buffer back to the sender
             iSendResult = send( ClientSocket, recvbuf, iResult, 0 );
-            if (iSendResult == SOCKET_ERROR) {
+            if (iSendResult == SOCKET_ERROR)
+			{
                 printf("send failed with error: %d\n", WSAGetLastError());
                 closesocket(ClientSocket);
                 WSACleanup();
@@ -119,19 +167,5 @@ int __cdecl main(void)
         }
 
     } while (iResult > 0);
-
-    // shutdown the connection since we're done
-    iResult = shutdown(ClientSocket, SD_SEND);
-    if (iResult == SOCKET_ERROR) {
-        printf("shutdown failed with error: %d\n", WSAGetLastError());
-        closesocket(ClientSocket);
-        WSACleanup();
-        return 1;
-    }
-
-    // cleanup
-    closesocket(ClientSocket);
-    WSACleanup();
-
-    return 0;
-}
+    return 0; 
+} 
